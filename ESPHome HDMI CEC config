@@ -1,4 +1,4 @@
-# set up new ESPHome device in Home Assistant called "HDMI CEC bridge" or another descriptive title. Once added, acces the ESP wirelessly via the ESPHome add-on and then add the below to the ESPhome configuration for the new device
+# set up new ESPHome device in Home Assistant called "hdmi_cec_bridge" (or another descriptive title). Once added, access the ESP wirelessly via the ESPHome add-on and then add the below to the ESPhome configuration for the new device
 
 mqtt:
   broker: '192.168.3.25' # insert the IP of your own mqtt broker here
