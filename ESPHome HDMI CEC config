@@ -1,9 +1,48 @@
-# set up new ESPHome device in Home Assistant called "hdmi_cec_bridge" (or another descriptive title). Once added, access the ESP wirelessly via the ESPHome add-on and then add the below to the ESPhome configuration for the new device
+# This is an example config. Set up new ESPHome device in Home Assistant called "hdmi_cec_bridge" (or another descriptive title). Once added, access the ESP wirelessly via the ESPHome add-on and then add/merge the below to the ESPhome configuration for the new device. Use the encryption key and other passwords already created in your default config for the specific device
+
+esphome:
+  name: hdmi_cec_bridge
+  friendly_name: HDMI CEC bridge
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "oiuh4fo875ygh459gy8es8p4hu"
+  services:
+    - service: hdmi_cec_send
+      variables:
+        cec_destination: int
+        cec_data: int[]
+      then:
+        - hdmi_cec.send:
+            destination: !lambda "return static_cast<unsigned char>(cec_destination);"
+            data: !lambda "std::vector<unsigned char> charVector; for (int i : cec_data) { charVector.push_back(static_cast<unsigned char>(i)); } return charVector;"
+
+ota:
+  - platform: esphome
+    password: "r8437yro4ufhowhwiufhowa4"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Hdmi Fallback Hotspot"
+    password: "9a8fyh87ho8a7iy4hf"
 
 mqtt:
-  broker: '192.168.3.25' # insert the IP of your own mqtt broker here
-  username: !secret mqtt_user # make sure your mqtt user is added to the ESPHome secrets file
-  password: !secret mqtt_password # make sure your mqtt password is added to the ESPHome secrets file
+  broker: '192.168.3.199' # insert IP of your own MQTT broker (e.g. the IP of your HA server)
+  username: !secret mqtt_user # make sure your MQTT username is added to the secrets file in ESPHome
+  password: !secret mqtt_password # make sure your MQTT password is added to the secrets file in ESPHome
   discovery: false # if you only want your own MQTT topics
 
 captive_portal:
@@ -99,63 +138,63 @@ button:
         destination: 0x5
         data: [0x44, 0x43]
   - platform: template
-    name: "Turn on Playback 1 device"
+    name: "Turn on Playbeck device 1"
     on_press:
       hdmi_cec.send:
         # "source" can optionally be set, like if you want to spoof another device's address
         destination: 4
         data: [0x44, 0x6D]
   - platform: template
-    name: "Turn off Playback 1 device"
+    name: "Turn off Playbeck device 1"
     on_press:
       hdmi_cec.send:
         # "source" can optionally be set, like if you want to spoof another device's address
         destination: 4
         data: [0x36]
   - platform: template
-    name: "Playback 1 device home button"
+    name: "Playbeck device 1 home button"
     on_press:
       hdmi_cec.send:
         # "source" can optionally be set, like if you want to spoof another device's address
         destination: 4
         data: [0x44, 0x09]
   - platform: template
-    name: "Playback 1 device select/ok"
+    name: "Playbeck device 1 select/ok"
     on_press:
       hdmi_cec.send:
         # "source" can optionally be set, like if you want to spoof another device's address
         destination: 4
         data: [0x44, 0x00]
   - platform: template
-    name: "Playback 1 device exit/back"
+    name: "Playbeck device 1 exit/back"
     on_press:
       hdmi_cec.send:
         # "source" can optionally be set, like if you want to spoof another device's address
         destination: 4
         data: [0x44, 0x0D]
   - platform: template
-    name: "Playback 1 device play/pause"
+    name: "Playbeck device 1 play/pause"
     on_press:
       hdmi_cec.send:
         # "source" can optionally be set, like if you want to spoof another device's address
         destination: 4
         data: [0x44, 0x44]
   - platform: template
-    name: "Turn on Playback 2 device"
+    name: "Turn on Playbeck device 2"
     on_press:
       hdmi_cec.send:
         # "source" can optionally be set, like if you want to spoof another device's address
         destination: 8
         data: [0x44, 0x6D]
   - platform: template
-    name: "Turn off Playback 2 device"
+    name: "Turn off Playbeck device 2"
     on_press:
       hdmi_cec.send:
         # "source" can optionally be set, like if you want to spoof another device's address
         destination: 8
         data: [0x36]
   - platform: template
-    name: "Playback 2 device play/pause"
+    name: "Playbeck device 2 play/pause"
     on_press:
       hdmi_cec.send:
         # "source" can optionally be set, like if you want to spoof another device's address
