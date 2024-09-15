@@ -1,7 +1,7 @@
 # This is an example config. Visit https://web.esphome.io/ and select "prepare for first use". Once added to Home Assistant, access the ESP wirelessly via the ESPHome add-on and then add/merge the below to the ESPhome configuration for the new device. Use the encryption key and other passwords already created in your default config for the specific device
 
 esphome:
-  name: hdmi_cec_bridge
+  name: hdmi-cec-bridge
   friendly_name: HDMI CEC bridge
 
 esp32:
