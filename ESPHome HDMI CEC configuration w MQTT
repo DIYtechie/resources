@@ -1,0 +1,200 @@
+esphome:
+  name: hdmi-cec-bridge
+  friendly_name: HDMI CEC Bridge
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "æsalkSFLKJNDFCIE89437C9M03YQ="
+  services:
+    - service: hdmi_cec_send
+      variables:
+        cec_destination: int
+        cec_data: int[]
+      then:
+        - hdmi_cec.send:
+            destination: !lambda "return static_cast<unsigned char>(cec_destination);"
+            data: !lambda "std::vector<unsigned char> charVector; for (int i : cec_data) { charVector.push_back(static_cast<unsigned char>(i)); } return charVector;"
+
+ota:
+  - platform: esphome
+    password: "C9QT38MU48RUCQ30RQCK+Q4RUC4+389"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "HDMI Fallback Hotspot"
+    password: "89437098QJ8R9JRQ34RU0UR"
+
+mqtt:
+  broker: '192.168.3.199' # insert IP of your own MQTT broker (e.g. the IP of your HA server)
+  username: !secret mqtt_user # make sure your MQTT username is added to the secrets file in the ESPHome Add-on
+  password: !secret mqtt_password # make sure your MQTT password is added to the secrets file in the ESPHome Add-on
+  discovery: false # if you only want your own MQTT topics
+
+captive_portal:
+
+external_components:
+  - source: github://Palakis/esphome-hdmi-cec
+
+hdmi_cec:
+  # Pick a GPIO pin that can do both input AND output
+  pin: GPIO26 # Required
+  # The address can be anything you want. Use 0xF if you only want to listen to the bus and not act like a standard device
+  address: 0xE # Required
+  # Physical address of the device. In this case: 4.0.0.0 (HDMI4 on the TV)
+  # DDC support is not yet implemented, so you'll have to set this manually.
+  physical_address: 0x4200 # Required
+  # The name that will we displayed in the list of devices on your TV/receiver
+  osd_name: "HDMI bridge" # Optional. Defaults to "esphome"
+  # By default, promiscuous mode is disabled, so the component only handles directly-address messages (matching
+  # the address configured above) and broadcast messages. Enabling promiscuous mode will make the component
+  # listen for all messages (both in logs and the on_message triggers)
+  promiscuous_mode: true # Optional. Defaults to false
+  # By default, monitor mode is disabled, so the component can send messages and acknowledge incoming messages.
+  # Enabling monitor mode lets the component act as a passive listener, disabling active manipulation of the CEC bus.
+  monitor_mode: false # Optional. Defaults to false
+  # List of triggers to handle specific commands. Each trigger has the following optional filter parameters:
+  # - "source": match messages coming from the specified address
+  # - "destination": match messages meant for the specified address
+  # - "opcode": match messages bearing the specified opcode
+  # - "data": exact-match on message content
+  # Actions called from these triggers is called with "source", "destination" and "data" as parameters
+  on_message:
+    - opcode: 0x36 # opcode for "Standby"
+      then:
+        logger.log: "Got Standby command"
+    
+    # Respond to "Menu Request" (not required, example purposes only)
+    - opcode: 0x8D
+      then:
+        hdmi_cec.send:
+          # both "destination" and "data" are templatable
+          destination: !lambda return source;
+          data: [0x8E, 0x01] # 0x01 => "Menu Deactivated"
+    - then:
+        mqtt.publish:
+          topic: cec_messages
+          payload: !lambda |-
+            std::vector<uint8_t> full_frame;
+            full_frame.push_back((source << 4) | (destination & 0xF));
+            full_frame.insert(full_frame.end(), data.begin(), data.end());
+            return hdmi_cec::bytes_to_string(full_frame); 
+
+button:
+  - platform: template
+    name: "Turn all HDMI devices off"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 0xF # Broadcast
+        data: [0x36] # "Standby" opcode
+  - platform: template
+    name: "Turn TV on"
+    on_press:
+      hdmi_cec.send:
+        source: 1 # can optionally be set, like if you want to spoof another device's address
+        destination: 0
+        data: [0x04]
+  - platform: template
+    name: "Turn TV off"
+    on_press:
+      hdmi_cec.send:
+        source: 1 # can optionally be set, like if you want to spoof another device's address
+        destination: 0
+        data: [0x36]
+  - platform: template
+    name: "Volume up"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 0x5
+        data: [0x44, 0x41]
+  - platform: template
+    name: "Volume down"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 0x5
+        data: [0x44, 0x42]
+  - platform: template
+    name: "Mute"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 0x5
+        data: [0x44, 0x43]
+  - platform: template
+    name: "Turn on Playback device 1"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 4
+        data: [0x44, 0x6D]
+  - platform: template
+    name: "Turn off Playback device 1"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 4
+        data: [0x36]
+  - platform: template
+    name: "Playback device 1 home button"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 4
+        data: [0x44, 0x09]
+  - platform: template
+    name: "Playback device 1 select/ok"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 4
+        data: [0x44, 0x00]
+  - platform: template
+    name: "Playback device 1 exit/back"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 4
+        data: [0x44, 0x0D]
+  - platform: template
+    name: "Playback device 1 play/pause"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 4
+        data: [0x44, 0x44]
+  - platform: template
+    name: "Turn on Playback device 2"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 8
+        data: [0x44, 0x6D]
+  - platform: template
+    name: "Turn off Playback device 2"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 8
+        data: [0x36]
+  - platform: template
+    name: "Playback device 2 play/pause"
+    on_press:
+      hdmi_cec.send:
+        # "source" can optionally be set, like if you want to spoof another device's address
+        destination: 8
+        data: [0x44, 0x46]
