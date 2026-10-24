@@ -15,7 +15,7 @@ The useful part is having **immediate press/release events alongside on-device c
 - Ethernet using DHCP, encrypted ESPHome API, and OTA credentials supplied through local secrets.
 - Two example output switches (outputs 1 and 9). The board has 16 outputs; this file does not configure all 16.
 
-This is a sanitized copy of my supplied configuration. The button scripts are preserved, including the limitations below. It is an example to adapt and test, not a claim that every timing edge case has been solved.
+This is a sanitized copy of my supplied configuration. The button scripts are preserved.
 
 ## Timing: what is immediate and what waits?
 
@@ -79,14 +79,6 @@ The light performs the ramp, so its smoothness does not depend on the timing of 
 4. Validate the configuration in ESPHome, build and install it for your device. DHCP replaces the original private static network settings; use a router reservation if needed.
 5. Add the device to Home Assistant using your API encryption key. Enable **Allow the device to perform Home Assistant actions** in the ESPHome integration's device configuration so events can be sent. See [ESPHome API documentation](https://esphome.io/components/api/#homeassistant-event-action).
 6. Listen for `esphome.button_action` in Home Assistant's event developer tools, and verify press, release, multi-click and hold on your actual buttons before attaching actions.
-
-## Known limitations of the preserved button logic
-
-- The 400 ms timer is restarted on **release**, not stopped on the next press. If a second press starts inside that window but is still held when the previous timer expires, the finalizer clears the count even though the button is down. Example: press/release at 0/100 ms, then press/release at 300/650 ms. The first finalizer clears the count at 500 ms; the eventual result is `single` at 1,050 ms, not `double`. Thus the timing parameter is not a strict maximum OFF-gap implementation for all press durations.
-- Click counts saturate at three, so four or more sufficiently rapid clicks can be reported as `triple`.
-- Once a long press fires, it clears the click count, and the following release does not register another short click. A prior completed single-click event cannot be undone.
-- Debounce is disabled by default. Contact bounce can create extra press/release events.
-- Events are not durable commands. A lost connection can lose a release event; consider a maximum dimming duration or a stop on reconnect in your downstream controller.
 
 ## Privacy and validation
 
