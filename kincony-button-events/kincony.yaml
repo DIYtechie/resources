@@ -1,0 +1,1627 @@
+# Public sharing version. See README.md for timing and known limitations.
+###############################################################################
+# Device & platform
+###############################################################################
+esphome:
+  name: kincony-kc868-a16
+  comment: "KC868-A16 with 16 inputs (multi-press on-device); example outputs 1 and 9"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+###############################################################################
+# Global substitutions (tuning knobs you can adjust in one place)
+###############################################################################
+substitutions:
+  kc_device: "kc868_a16"
+
+  # Multi-press timing:
+  mp_gap: "400ms"       # max OFF pause between clicks (defines single vs double vs triple)
+  long_min: "1500ms"    # hold time to trigger long press (fires while holding)
+  debounce_ms: "0ms"    # increase to 10ms if you see switch bounce
+
+###############################################################################
+# Network (LAN8720). New 'clk' syntax avoids deprecation warning.
+###############################################################################
+ethernet:
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk:                # replaces old 'clk_mode: GPIO17_OUT'
+    pin: GPIO17
+    mode: CLK_OUT
+  phy_addr: 0
+
+  # DHCP: configure a reservation on your router if needed.
+
+###############################################################################
+# OTA + API + Logging
+###############################################################################
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+logger: {}       # Enable logs
+
+###############################################################################
+# I²C bus (note: GPIO5 is a strapping pin; avoid heavy external pulls)
+###############################################################################
+i2c:
+  sda: 4
+  scl: 5
+  frequency: 400kHz
+  scan: true
+  id: bus_a
+
+###############################################################################
+# PCF8574 expanders (two for outputs, two for inputs)
+###############################################################################
+pcf8574:
+  - id: pcf8574_hub_out_1   # outputs 1-8
+    address: 0x24
+
+  - id: pcf8574_hub_out_2   # outputs 9-16
+    address: 0x25
+
+  - id: pcf8574_hub_in_1    # inputs 1-8
+    address: 0x21
+
+  - id: pcf8574_hub_in_2    # inputs 9-16
+    address: 0x22
+
+###############################################################################
+# Example outputs (you can add more following the same pattern)
+###############################################################################
+switch:
+  - platform: gpio
+    name: "KinCony output 1"
+    pin:
+      pcf8574: pcf8574_hub_out_1
+      number: 0
+      mode: OUTPUT
+      inverted: false
+
+  - platform: gpio
+    name: "KinCony output 9"
+    pin:
+      pcf8574: pcf8574_hub_out_2
+      number: 0
+      mode: OUTPUT
+      inverted: false
+
+###############################################################################
+# Button state & scripts for ALL 16 inputs
+# - Each input uses three globals: is_down, long_fired, click_count
+# - Long press fires while holding (after long_min)
+# - Single/Double/Triple finalize after mp_gap (no overlap with long)
+###############################################################################
+globals:
+  # --- Button 1 ---
+  - id: btn1_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn1_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn1_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 2 ---
+  - id: btn2_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn2_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn2_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 3 ---
+  - id: btn3_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn3_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn3_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 4 ---
+  - id: btn4_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn4_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn4_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 5 ---
+  - id: btn5_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn5_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn5_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 6 ---
+  - id: btn6_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn6_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn6_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 7 ---
+  - id: btn7_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn7_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn7_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 8 ---
+  - id: btn8_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn8_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn8_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 9 ---
+  - id: btn9_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn9_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn9_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 10 ---
+  - id: btn10_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn10_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn10_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 11 ---
+  - id: btn11_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn11_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn11_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 12 ---
+  - id: btn12_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn12_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn12_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 13 ---
+  - id: btn13_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn13_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn13_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 14 ---
+  - id: btn14_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn14_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn14_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 15 ---
+  - id: btn15_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn15_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn15_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # --- Button 16 ---
+  - id: btn16_is_down
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn16_long_fired
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: btn16_click_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+###############################################################################
+# Button Scripts (Long press + Finalize clicks for inputs 1–16)
+###############################################################################
+script:
+  # --- Long-press timers (fire button_X_long while held) ---
+  - id: btn1_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn1_is_down) && !id(btn1_long_fired);'
+          then:
+            - lambda: |-
+                id(btn1_long_fired) = true;
+                id(btn1_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "1", action: "button_1_long" }
+
+  - id: btn2_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn2_is_down) && !id(btn2_long_fired);'
+          then:
+            - lambda: |-
+                id(btn2_long_fired) = true;
+                id(btn2_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "2", action: "button_2_long" }
+
+  - id: btn3_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn3_is_down) && !id(btn3_long_fired);'
+          then:
+            - lambda: |-
+                id(btn3_long_fired) = true;
+                id(btn3_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "3", action: "button_3_long" }
+
+  - id: btn4_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn4_is_down) && !id(btn4_long_fired);'
+          then:
+            - lambda: |-
+                id(btn4_long_fired) = true;
+                id(btn4_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "4", action: "button_4_long" }
+
+  - id: btn5_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn5_is_down) && !id(btn5_long_fired);'
+          then:
+            - lambda: |-
+                id(btn5_long_fired) = true;
+                id(btn5_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "5", action: "button_5_long" }
+
+  - id: btn6_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn6_is_down) && !id(btn6_long_fired);'
+          then:
+            - lambda: |-
+                id(btn6_long_fired) = true;
+                id(btn6_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "6", action: "button_6_long" }
+
+  - id: btn7_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn7_is_down) && !id(btn7_long_fired);'
+          then:
+            - lambda: |-
+                id(btn7_long_fired) = true;
+                id(btn7_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "7", action: "button_7_long" }
+
+  - id: btn8_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn8_is_down) && !id(btn8_long_fired);'
+          then:
+            - lambda: |-
+                id(btn8_long_fired) = true;
+                id(btn8_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "8", action: "button_8_long" }
+
+  - id: btn9_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn9_is_down) && !id(btn9_long_fired);'
+          then:
+            - lambda: |-
+                id(btn9_long_fired) = true;
+                id(btn9_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "9", action: "button_9_long" }
+
+  - id: btn10_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn10_is_down) && !id(btn10_long_fired);'
+          then:
+            - lambda: |-
+                id(btn10_long_fired) = true;
+                id(btn10_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "10", action: "button_10_long" }
+
+  - id: btn11_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn11_is_down) && !id(btn11_long_fired);'
+          then:
+            - lambda: |-
+                id(btn11_long_fired) = true;
+                id(btn11_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "11", action: "button_11_long" }
+
+  - id: btn12_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn12_is_down) && !id(btn12_long_fired);'
+          then:
+            - lambda: |-
+                id(btn12_long_fired) = true;
+                id(btn12_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "12", action: "button_12_long" }
+
+  - id: btn13_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn13_is_down) && !id(btn13_long_fired);'
+          then:
+            - lambda: |-
+                id(btn13_long_fired) = true;
+                id(btn13_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "13", action: "button_13_long" }
+
+  - id: btn14_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn14_is_down) && !id(btn14_long_fired);'
+          then:
+            - lambda: |-
+                id(btn14_long_fired) = true;
+                id(btn14_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "14", action: "button_14_long" }
+
+  - id: btn15_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn15_is_down) && !id(btn15_long_fired);'
+          then:
+            - lambda: |-
+                id(btn15_long_fired) = true;
+                id(btn15_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "15", action: "button_15_long" }
+
+  - id: btn16_long_timer
+    mode: restart
+    then:
+      - delay: ${long_min}
+      - if:
+          condition:
+            lambda: 'return id(btn16_is_down) && !id(btn16_long_fired);'
+          then:
+            - lambda: |-
+                id(btn16_long_fired) = true;
+                id(btn16_click_count) = 0;
+            - homeassistant.event:
+                event: "esphome.button_action"
+                data: { device: "${kc_device}", input: "16", action: "button_16_long" }
+
+###############################################################################
+# Click finalization scripts (inputs 1–16)
+# - Fires "button_X_single", "button_X_double" or "button_X_triple"
+# - Only triggers if no long press fired
+###############################################################################
+
+  # --- Finalize clicks for input 1 ---
+  - id: btn1_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn1_is_down) && !id(btn1_long_fired) && id(btn1_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn1_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "1", action: "button_1_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn1_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "1", action: "button_1_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "1", action: "button_1_triple" }
+      - lambda: 'id(btn1_click_count) = 0;'
+
+  # --- Input 2 ---
+  - id: btn2_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn2_is_down) && !id(btn2_long_fired) && id(btn2_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn2_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "2", action: "button_2_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn2_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "2", action: "button_2_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "2", action: "button_2_triple" }
+      - lambda: 'id(btn2_click_count) = 0;'
+
+  # --- Input 3 ---
+  - id: btn3_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn3_is_down) && !id(btn3_long_fired) && id(btn3_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn3_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "3", action: "button_3_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn3_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "3", action: "button_3_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "3", action: "button_3_triple" }
+      - lambda: 'id(btn3_click_count) = 0;'
+
+  # --- Input 4 ---
+  - id: btn4_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn4_is_down) && !id(btn4_long_fired) && id(btn4_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn4_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "4", action: "button_4_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn4_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "4", action: "button_4_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "4", action: "button_4_triple" }
+      - lambda: 'id(btn4_click_count) = 0;'
+
+  # --- Input 5 ---
+  - id: btn5_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn5_is_down) && !id(btn5_long_fired) && id(btn5_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn5_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "5", action: "button_5_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn5_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "5", action: "button_5_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "5", action: "button_5_triple" }
+      - lambda: 'id(btn5_click_count) = 0;'
+
+  # --- Input 6 ---
+  - id: btn6_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn6_is_down) && !id(btn6_long_fired) && id(btn6_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn6_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "6", action: "button_6_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn6_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "6", action: "button_6_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "6", action: "button_6_triple" }
+      - lambda: 'id(btn6_click_count) = 0;'
+
+  # --- Input 7 ---
+  - id: btn7_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn7_is_down) && !id(btn7_long_fired) && id(btn7_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn7_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "7", action: "button_7_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn7_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "7", action: "button_7_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "7", action: "button_7_triple" }
+      - lambda: 'id(btn7_click_count) = 0;'
+
+  # --- Input 8 ---
+  - id: btn8_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn8_is_down) && !id(btn8_long_fired) && id(btn8_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn8_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "8", action: "button_8_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn8_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "8", action: "button_8_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "8", action: "button_8_triple" }
+      - lambda: 'id(btn8_click_count) = 0;'
+
+  # --- Input 9 ---
+  - id: btn9_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn9_is_down) && !id(btn9_long_fired) && id(btn9_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn9_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "9", action: "button_9_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn9_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "9", action: "button_9_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "9", action: "button_9_triple" }
+      - lambda: 'id(btn9_click_count) = 0;'
+
+  # --- Input 10 ---
+  - id: btn10_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn10_is_down) && !id(btn10_long_fired) && id(btn10_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn10_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "10", action: "button_10_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn10_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "10", action: "button_10_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "10", action: "button_10_triple" }
+      - lambda: 'id(btn10_click_count) = 0;'
+
+  # --- Input 11 ---
+  - id: btn11_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn11_is_down) && !id(btn11_long_fired) && id(btn11_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn11_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "11", action: "button_11_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn11_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "11", action: "button_11_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "11", action: "button_11_triple" }
+      - lambda: 'id(btn11_click_count) = 0;'
+
+  # --- Input 12 ---
+  - id: btn12_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn12_is_down) && !id(btn12_long_fired) && id(btn12_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn12_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "12", action: "button_12_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn12_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "12", action: "button_12_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "12", action: "button_12_triple" }
+      - lambda: 'id(btn12_click_count) = 0;'
+
+  # --- Input 13 ---
+  - id: btn13_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn13_is_down) && !id(btn13_long_fired) && id(btn13_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn13_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "13", action: "button_13_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn13_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "13", action: "button_13_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "13", action: "button_13_triple" }
+      - lambda: 'id(btn13_click_count) = 0;'
+
+  # --- Input 14 ---
+  - id: btn14_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn14_is_down) && !id(btn14_long_fired) && id(btn14_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn14_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "14", action: "button_14_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn14_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "14", action: "button_14_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "14", action: "button_14_triple" }
+      - lambda: 'id(btn14_click_count) = 0;'
+
+  # --- Input 15 ---
+  - id: btn15_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn15_is_down) && !id(btn15_long_fired) && id(btn15_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn15_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "15", action: "button_15_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn15_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "15", action: "button_15_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "15", action: "button_15_triple" }
+      - lambda: 'id(btn15_click_count) = 0;'
+
+  # --- Input 16 ---
+  - id: btn16_finalize_clicks
+    mode: restart
+    then:
+      - delay: ${mp_gap}
+      - if:
+          condition:
+            lambda: 'return !id(btn16_is_down) && !id(btn16_long_fired) && id(btn16_click_count) > 0;'
+          then:
+            - if:
+                condition:
+                  lambda: 'return id(btn16_click_count) == 1;'
+                then:
+                  - homeassistant.event:
+                      event: "esphome.button_action"
+                      data: { device: "${kc_device}", input: "16", action: "button_16_single" }
+                else:
+                  - if:
+                      condition:
+                        lambda: 'return id(btn16_click_count) == 2;'
+                      then:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "16", action: "button_16_double" }
+                      else:
+                        - homeassistant.event:
+                            event: "esphome.button_action"
+                            data: { device: "${kc_device}", input: "16", action: "button_16_triple" }
+      - lambda: 'id(btn16_click_count) = 0;'
+
+
+
+###############################################################################
+# Binary Sensors (Inputs 1–16)
+# Emits: button_X_pressed / button_X_released / button_X_single / double / triple / long
+###############################################################################
+binary_sensor:
+  # --- Inputs 1–8 on first PCF8574 hub ---
+  - platform: gpio
+    name: "KinCony input 1"
+    pin:
+      pcf8574: pcf8574_hub_in_1
+      number: 0
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn1_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "1", action: "button_1_pressed" }
+        - script.execute: btn1_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn1_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "1", action: "button_1_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn1_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn1_long_fired) = false;
+                  id(btn1_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn1_click_count) < 3) id(btn1_click_count) += 1;
+              - script.execute: btn1_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 2"
+    pin:
+      pcf8574: pcf8574_hub_in_1
+      number: 1
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn2_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "2", action: "button_2_pressed" }
+        - script.execute: btn2_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn2_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "2", action: "button_2_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn2_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn2_long_fired) = false;
+                  id(btn2_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn2_click_count) < 3) id(btn2_click_count) += 1;
+              - script.execute: btn2_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 3"
+    pin:
+      pcf8574: pcf8574_hub_in_1
+      number: 2
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn3_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "3", action: "button_3_pressed" }
+        - script.execute: btn3_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn3_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "3", action: "button_3_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn3_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn3_long_fired) = false;
+                  id(btn3_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn3_click_count) < 3) id(btn3_click_count) += 1;
+              - script.execute: btn3_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 4"
+    pin:
+      pcf8574: pcf8574_hub_in_1
+      number: 3
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn4_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "4", action: "button_4_pressed" }
+        - script.execute: btn4_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn4_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "4", action: "button_4_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn4_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn4_long_fired) = false;
+                  id(btn4_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn4_click_count) < 3) id(btn4_click_count) += 1;
+              - script.execute: btn4_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 5"
+    pin:
+      pcf8574: pcf8574_hub_in_1
+      number: 4
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn5_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "5", action: "button_5_pressed" }
+        - script.execute: btn5_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn5_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "5", action: "button_5_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn5_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn5_long_fired) = false;
+                  id(btn5_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn5_click_count) < 3) id(btn5_click_count) += 1;
+              - script.execute: btn5_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 6"
+    pin:
+      pcf8574: pcf8574_hub_in_1
+      number: 5
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn6_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "6", action: "button_6_pressed" }
+        - script.execute: btn6_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn6_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "6", action: "button_6_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn6_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn6_long_fired) = false;
+                  id(btn6_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn6_click_count) < 3) id(btn6_click_count) += 1;
+              - script.execute: btn6_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 7"
+    pin:
+      pcf8574: pcf8574_hub_in_1
+      number: 6
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn7_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "7", action: "button_7_pressed" }
+        - script.execute: btn7_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn7_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "7", action: "button_7_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn7_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn7_long_fired) = false;
+                  id(btn7_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn7_click_count) < 3) id(btn7_click_count) += 1;
+              - script.execute: btn7_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 8"
+    pin:
+      pcf8574: pcf8574_hub_in_1
+      number: 7
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn8_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "8", action: "button_8_pressed" }
+        - script.execute: btn8_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn8_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "8", action: "button_8_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn8_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn8_long_fired) = false;
+                  id(btn8_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn8_click_count) < 3) id(btn8_click_count) += 1;
+              - script.execute: btn8_finalize_clicks
+
+  # --- Inputs 9–16 on second PCF8574 hub ---
+  - platform: gpio
+    name: "KinCony input 9"
+    pin:
+      pcf8574: pcf8574_hub_in_2
+      number: 0
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn9_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "9", action: "button_9_pressed" }
+        - script.execute: btn9_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn9_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "9", action: "button_9_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn9_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn9_long_fired) = false;
+                  id(btn9_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn9_click_count) < 3) id(btn9_click_count) += 1;
+              - script.execute: btn9_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 10"
+    pin:
+      pcf8574: pcf8574_hub_in_2
+      number: 1
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn10_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "10", action: "button_10_pressed" }
+        - script.execute: btn10_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn10_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "10", action: "button_10_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn10_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn10_long_fired) = false;
+                  id(btn10_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn10_click_count) < 3) id(btn10_click_count) += 1;
+              - script.execute: btn10_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 11"
+    pin:
+      pcf8574: pcf8574_hub_in_2
+      number: 2
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn11_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "11", action: "button_11_pressed" }
+        - script.execute: btn11_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn11_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "11", action: "button_11_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn11_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn11_long_fired) = false;
+                  id(btn11_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn11_click_count) < 3) id(btn11_click_count) += 1;
+              - script.execute: btn11_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 12"
+    pin:
+      pcf8574: pcf8574_hub_in_2
+      number: 3
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn12_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "12", action: "button_12_pressed" }
+        - script.execute: btn12_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn12_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "12", action: "button_12_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn12_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn12_long_fired) = false;
+                  id(btn12_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn12_click_count) < 3) id(btn12_click_count) += 1;
+              - script.execute: btn12_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 13"
+    pin:
+      pcf8574: pcf8574_hub_in_2
+      number: 4
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn13_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "13", action: "button_13_pressed" }
+        - script.execute: btn13_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn13_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "13", action: "button_13_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn13_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn13_long_fired) = false;
+                  id(btn13_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn13_click_count) < 3) id(btn13_click_count) += 1;
+              - script.execute: btn13_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 14"
+    pin:
+      pcf8574: pcf8574_hub_in_2
+      number: 5
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn14_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "14", action: "button_14_pressed" }
+        - script.execute: btn14_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn14_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "14", action: "button_14_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn14_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn14_long_fired) = false;
+                  id(btn14_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn14_click_count) < 3) id(btn14_click_count) += 1;
+              - script.execute: btn14_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 15"
+    pin:
+      pcf8574: pcf8574_hub_in_2
+      number: 6
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn15_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "15", action: "button_15_pressed" }
+        - script.execute: btn15_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn15_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "15", action: "button_15_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn15_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn15_long_fired) = false;
+                  id(btn15_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn15_click_count) < 3) id(btn15_click_count) += 1;
+              - script.execute: btn15_finalize_clicks
+
+  - platform: gpio
+    name: "KinCony input 16"
+    pin:
+      pcf8574: pcf8574_hub_in_2
+      number: 7
+      mode: INPUT
+      inverted: true
+    filters:
+      - delayed_on: ${debounce_ms}
+      - delayed_off: ${debounce_ms}
+    on_press:
+      then:
+        - lambda: 'id(btn16_is_down) = true;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "16", action: "button_16_pressed" }
+        - script.execute: btn16_long_timer
+    on_release:
+      then:
+        - lambda: 'id(btn16_is_down) = false;'
+        - homeassistant.event:
+            event: "esphome.button_action"
+            data: { device: "${kc_device}", input: "16", action: "button_16_released" }
+        - if:
+            condition:
+              lambda: 'return id(btn16_long_fired);'
+            then:
+              - lambda: |-
+                  id(btn16_long_fired) = false;
+                  id(btn16_click_count) = 0;
+            else:
+              - lambda: |-
+                  if (id(btn16_click_count) < 3) id(btn16_click_count) += 1;
+              - script.execute: btn16_finalize_clicks
+

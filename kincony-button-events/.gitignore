@@ -1,0 +1,7 @@
+secrets.yaml
+secrets.*.yaml
+!secrets.example.yaml
+.esphome/
+*.bin
+*.elf
+.DS_Store
